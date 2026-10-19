@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon sport matinal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f9; color: #333; display: flex; flex-direction: column; align-items: center; }
+        header { position: sticky; top: 0; background: #fff; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; padding: 15px; z-index: 1000; }
+        h1 { margin: 0 0 10px 0; font-size: 1.8rem; }
+        #timer { font-size: 2.5rem; font-weight: bold; font-family: monospace; margin-bottom: 10px; }
+        .controls button { padding: 10px 20px; font-size: 1rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; margin: 0 5px; }
+        .controls button.start { background: #28a745; }
+        .controls button.reset { background: #6c757d; }
+        .controls button.stop { background: #dc3545; }
+        main { max-width: 600px; width: 100%; padding: 20px; box-sizing: border-box; margin-top: 20px; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
+        .card h2 { color: #007bff; margin-top: 0; }
+        .card p { font-size: 1.2rem; line-height: 1.5; }
+        .focus { background: #e9ecef; padding: 10px; border-radius: 5px; font-size: 1rem; margin-top: 15px; color: #495057; text-align: left; }
+        .progress { margin-top: 15px; font-size: 0.9rem; color: #666; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Mon sport matinal</h1>
+        <div id="timer">00:30.0</div>
+        <div class="controls">
+            <button onclick="prevExercise()">Précédent</button>
+            <button id="startBtn" class="start" onclick="toggleTimer()">Start</button>
+            <button class="reset" onclick="resetTimer()">Reset</button>
+            <button onclick="nextExercise()">Suivant</button>
+        </div>
+    </header>
+    <main>
+        <div class="card" id="exerciseCard">
+            <h2 id="exTitle">Chargement...</h2>
+            <p id="exDesc">Description de l'exercice</p>
+            <div id="exFocus" class="focus" style="display: none;"></div>
+            <div class="progress" id="exProgress">Chargement...</div>
+        </div>
+    </main>
+    <script>
+        const exercises = [
+            { title: "Phase 1 : Reveil 1/2", duration: 30, desc: "Assis, mouvement de flexion du dos, les bras croisés, à droite puis gauche." },
+            { title: "Phase 1 : Reveil 2/2", duration: 30, desc: "Debout, ébrouement du corps." },
+            { title: "Phase 1 : Rotations articulaires (Chevilles)", duration: 15, desc: "Rotations des chevilles." },
+            { title: "Phase 1 : Rotations articulaires (Genoux)", duration: 15, desc: "Rotations des genoux." },
+            { title: "Phase 1 : Rotations articulaires (Bassin)", duration: 15, desc: "Rotations du bassin." },
+            { title: "Phase 1 : Rotations articulaires (Épaules)", duration: 15, desc: "Rotations des épaules." },
+            { title: "Phase 1 : Cat-Cow", duration: 60, desc: "À quatre pattes, alterner dos creux en inspirant et dos rond en expirant pour assouplir la colonne." },
+            { title: "Phase 1 : Montées de genoux et ouvertures de hanches", duration: 60, desc: "Au rythme de la marche, alterner lever de genoux et ouvertures vers l'extérieur." },
+            
+            /* Phase 2 - Série 1 */
+            { title: "Phase 2 (1/2) : Squats poids de corps", duration: 45, desc: "Squats au poids de corps.", focus: "Focus : Pieds largeur d'épaules, dos droit, descente contrôlée." },
+            { title: "Phase 2 (1/2) : Pompes adaptées", duration: 45, desc: "Pompes adaptées.", focus: "Focus : Sur les mains (ou sur les genoux si besoin), coudes rentrés à 45°. Gainage de la ceinture abdominale." },
+            { title: "Phase 2 (1/2) : Fentes alternées", duration: 45, desc: "Fentes alternées.", focus: "Focus : Pas vers l'arrière, genou rasant le sol, buste vertical." },
+            { title: "Phase 2 (1/2) : Gainage planche", duration: 45, desc: "Gainage en planche.", focus: "Focus : Sur les avant-bras, alignement tête-tronc-bassin, fessiers serrés." },
+            { title: "Phase 2 (1/2) : Gainage latéral", duration: 45, desc: "Gainage latéral.", focus: "Focus : Coude sous l'épaule." },
+            
+            /* Pause inter-série */
+            { title: "Pause", duration: 30, desc: "Recupération, hydratation et respiration avant la seconde série de la Phase 2." },
+            
+            /* Phase 2 - Série 2 */
+            { title: "Phase 2 (2/2) : Squats poids de corps", duration: 45, desc: "Squats au poids de corps.", focus: "Focus : Pieds largeur d'épaules, dos droit, descente contrôlée." },
+            { title: "Phase 2 (2/2) : Pompes adaptées", duration: 45, desc: "Pompes adaptées.", focus: "Focus : Sur les mains (ou sur les genoux si besoin), coudes rentrés à 45°. Gainage de la ceinture abdominale." },
+            { title: "Phase 2 (2/2) : Fentes alternées", duration: 45, desc: "Fentes alternées.", focus: "Focus : Pas vers l'arrière, genou rasant le sol, buste vertical." },
+            { title: "Phase 2 (2/2) : Gainage planche", duration: 45, desc: "Gainage en planche.", focus: "Focus : Sur les avant-bras, alignement tête-tronc-bassin, fessiers serrés." },
+            { title: "Phase 2 (2/2) : Gainage latéral", duration: 45, desc: "Gainage latéral.", focus: "Focus : Coude sous l'épaule." },
+            
+            /* Phase 3 */
+            { title: "Phase 3 : Chien tête en bas", duration: 60, desc: "Pousser les fesses vers le haut, bras tendus, chercher à rapprocher les talons du sol pour étirer mollets, ischio-jambiers et dos." },
+            { title: "Phase 3 : Étirement du psoas et fléchisseurs de hanche", duration: 60, desc: "Genou au sol en position de fente basse, pousser le bassin vers l'avant (30 sec par côté)." },
+            { title: "Phase 3 : Ouverture cage thoracique et pectoraux", duration: 60, desc: "Debout, bras croisés derrière le dos, tirer vers le bas et ouvrir les épaules en prenant 3 grandes inspirations thoraciques." }
+        ];
+
+        let currentIndex = 0;
+        let timeLeft = exercises[0].duration;
+        let timerInterval = null;
+        let isRunning = false;
+
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const exTitle = document.getElementById('exTitle');
+        const exDesc = document.getElementById('exDesc');
+        const exFocus = document.getElementById('exFocus');
+        const exProgress = document.getElementById('exProgress');
+
+        function updateDisplay() {
+            let mins = Math.floor(timeLeft / 60);
+            let secs = Math.floor(timeLeft % 60);
+            let tenths = Math.floor((timeLeft % 1) * 10);
+            if (tenths < 0) tenths = 0;
+            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
+        }
+
+        function loadExercise() {
+            if (currentIndex < exercises.length) {
+                exTitle.textContent = exercises[currentIndex].title;
+                exDesc.textContent = exercises[currentIndex].desc;
+                if (exercises[currentIndex].focus) {
+                    exFocus.textContent = exercises[currentIndex].focus;
+                    exFocus.style.display = "block";
+                } else {
+                    exFocus.style.display = "none";
+                }
+                exProgress.textContent = `Exercice ${currentIndex + 1} / ${exercises.length} (${exercises[currentIndex].duration}s)`;
+                timeLeft = exercises[currentIndex].duration;
+                updateDisplay();
+            } else {
+                exTitle.textContent = "Routine terminée";
+                exDesc.textContent = "Bravo, séance validée !";
+                exFocus.style.display = "none";
+                exProgress.textContent = "";
+                stopTimer();
+            }
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            startBtn.textContent = "Pause";
+            startBtn.classList.remove("start");
+            startBtn.classList.add("stop");
+            
+            let lastTime = performance.now();
+            timerInterval = setInterval(() => {
+                let now = performance.now();
+                let delta = (now - lastTime) / 1000;
+                lastTime = now;
+
+                timeLeft -= delta;
+                updateDisplay();
+
+                if (timeLeft <= 0) {
+                    currentIndex++;
+                    loadExercise();
+                }
+            }, 100);
+        }
+
+        function stopTimer() {
+            isRunning = false;
+            startBtn.textContent = "Start";
+            startBtn.classList.remove("stop");
+            startBtn.classList.add("start");
+            clearInterval(timerInterval);
+        }
+
+        function resetTimer() {
+            stopTimer();
+            currentIndex = 0;
+            loadExercise();
+        }
+
+        function prevExercise() {
+            if (currentIndex > 0) {
+                stopTimer();
+                currentIndex--;
+                loadExercise();
+            }
+        }
+
+        function nextExercise() {
+            stopTimer();
+            currentIndex++;
+            loadExercise();
+        }
+
+        loadExercise();
+    </script>
+</body>
+</html>
